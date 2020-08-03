@@ -1,0 +1,74 @@
+---
+title: "Practical Machine Learning Assignment"
+author: "Mahendra S Payaal"
+date: "8/3/2020"
+output: html_document
+---
+
+#  Practical Machine Learning Assignment to Predict the Manner of Exercise 
+
+## Synopsis
+
+The human activity recognition research thorugh fitbit etc. has traditionally focused on "which" activity was performed at a specific point in time. In the data provided the purpose was to investigate  "how (well)" an activity was performed by the wearer of a device. Six young healthy participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: exactly according to the specification (Class A) and in  incorrect mannner( Class B to E). The purpose of the project was to predict the type of activity i.e. from 'A' to 'E' through the training set provided and then use it to predict for a test set of 20 samples. The data set was downloaded, cleaned and then the prediction model giving at least 99% accuracy was adopted. Finally the test set was predicted.
+
+## Reading and Cleaning data set 
+
+### Reading the training and test data 
+
+```{r reading file}
+trainWts <- read.csv("C:/Users/mahendra.payaal/Documents/coursera/data/pml-training.csv")
+testWts <- read.csv("C:/Users/mahendra.payaal/Documents/coursera/data/pml-testing.csv")
+names(testWts) <- names(trainWts)
+dim(trainWts)
+dim(testWts)
+```
+
+There are 19,622 samples in training data 'trainWts' and 20 in testing data(testWts) with 160 variables in both.
+
+### Cleaning the Data
+
+The data was opened in Notepad++ and it was noticed that there were a number of blank spaces, "#DIV/0!" and NAs. The first two were also replaced with NA and thereafter those columns with NAs of 50% or more were deleted. The columns with 50% or more NAs do not serve any credible purpose even after imputing values. Columns 1 to 7 were also removed as these were about row number, name of person, time stamps etc. and not relevant to analysis.
+
+```{r cleaningData}
+# replacing blanks and 'DIV/0' by NA
+trainWts[trainWts==""]<- NA;trainWts[trainWts=="#DIV/0!"]<- NA
+testWts[testWts==""]<- NA;testWts[testWts=="#DIV/0!"]<- NA
+# finding columns with >50% NAs in training data and dropping them
+findNA_train <- apply(trainWts,2,is.na)
+findNA_train <- apply(findNA_train,2,sum)
+findNA_train <- findNA_train[findNA_train < 9811]
+# Making a new data frame after dropping column with > 50% NAs and  # columns 1 to7 
+trainWts1 <- subset(trainWts,select = names(findNA_train))
+dim(trainWts1)
+# dropping first 7 columns
+trainWts1 <- trainWts1[,-(1:7)]
+# same dropping of columns for test data set 
+testWts1 <- subset(testWts,select=names(trainWts1))
+dim(trainWts1);dim(testWts1)
+```
+
+we now see that the cleaned  training datasets 'trainWts1' is reduced to 53 variables from 160. Same is the case  for cleaned test data set'testWts1'.
+
+## Model development
+
+Since Random Forest and Boosting are the two most accurate prediction models we will first look at these two models as our aim is to get 99% accuracy. To train the modelwe will divide the  'trainwts1' into  training and testing datasets
+
+```{r modelDevelopment}
+library(randomForest);library(caret)
+inTrain <- createDataPartition(y= trainWts1$classe,p=0.7,list= FALSE)
+training <- trainWts1[inTrain,];testing <- trainWts1[-inTrain,]
+modFit <- randomForest(classe ~ ., data = training, ntree = 1000)
+pred <- predict(modFit,testing)
+confusionMatrix(pred,testing$classe)
+```
+
+We find that 99% accuracy in the prediction model has been achieved through 'Random Forest'.
+
+##  Predicting on actual test set 
+ 
+```{r prediction}
+pred_final <- predict(modFit,testWts1)
+pred_final
+```
+
+The prediction on actual 20 samples can be seen above.
